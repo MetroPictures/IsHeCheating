@@ -6,15 +6,24 @@ from core.api import MPServerAPI
 from core.video_pad import MPVideoPad
 from core.vars import UNPLAYABLE_FILES, BASE_DIR
 
+ENTER_KEY = 4
+CONTROL_KEY = 5
+
 class IsHeCheating(MPServerAPI, MPVideoPad):
 	def __init__(self):
 		MPServerAPI.__init__(self)
 
 		self.audio_routes = []
 
+		def sort_by_num(file_name):
+			return [int(n) if n.isdigit() else n for n in re.split('(\d+)', file_name)]
+
 		for r, _, files in os.walk(os.path.join(self.conf['media_dir'], "prompts")):
-			for i, prompt in enumerate([f for f in files if f not in UNPLAYABLE_FILES]): 
-				if re.match(r'\d+\.\s+Question.*\.wav$', prompt):
+			files = [f for f in files if f not in UNPLAYABLE_FILES]
+			files.sort(key=sort_by_num)
+
+			for i, prompt in enumerate(files):
+				if re.match(r'\d+\.Question.*\.wav$', prompt) or prompt == "1.IsHeCheatingMenu.wav":
 					self.audio_routes.append({
 						'wav' : os.path.join(r, prompt),
 						'gather' : xrange(6) if i != 13 else [CONTROL_KEY, ENTER_KEY]
