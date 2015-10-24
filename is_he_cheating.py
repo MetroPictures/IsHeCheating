@@ -1,40 +1,28 @@
-import random, os, json, logging
+import re, os, json, logging
 from sys import argv, exit
 from time import time, sleep
 
 from core.api import MPServerAPI
 from core.video_pad import MPVideoPad
-from core.vars import DEFAULT_TELEPHONE_GPIO, BASE_DIR
-
-KEY_MAP = {
-	'demo_main_menu' : [
-		(3, 'demo_first_choice'),
-		(4, 'demo_second_choice'),
-		(5, 'demo_third_choice')
-	],
-	'demo_first_choice' : [
-		(3, 'demo_fourth_choice'),
-		(4, 'demo_main_menu')
-	],
-	'demo_second_choice' : [
-		(3, 'demo_main_menu'),
-		(4, 'demo_fourth_choice')
-	],
-	'demo_third_choice' : [
-		(3, 'demo_main_menu'),
-		(4, 'demo_fourth_choice')
-	],
-	'demo_fourth_choice' : [
-		(3, 'demo_main_menu')
-	]
-}
+from core.vars import UNPLAYABLE_FILES, BASE_DIR
 
 class IsHeCheating(MPServerAPI, MPVideoPad):
 	def __init__(self):
 		MPServerAPI.__init__(self)
 
-		self.gpio_mappings = DEFAULT_TELEPHONE_GPIO
-		self.key_mappings = KEY_MAP
+		self.audio_routes = []
+
+		for r, _, files in os.walk(os.path.join(self.conf['media_dir'], "prompts")):
+			for i, prompt in enumerate([f for f in files if f not in UNPLAYABLE_FILES]): 
+				if re.match(r'\d+\.\s+Question.*\.wav$', prompt):
+					self.audio_routes.append({
+						'wav' : os.path.join(r, prompt),
+						'gather' : xrange(6) if i != 13 else [CONTROL_KEY, ENTER_KEY]
+					})
+			
+			break
+
+		print self.audio_routes
 
 		self.conf['d_files']['vid'] = {
 			'log' : self.conf['d_files']['module']['log'],
@@ -44,6 +32,33 @@ class IsHeCheating(MPServerAPI, MPVideoPad):
 		MPVideoPad.__init__(self)
 
 		logging.basicConfig(filename=self.conf['d_files']['module']['log'], level=logging.DEBUG)
+
+	def route_next(self, route_idx=0):
+		route = self.audio_routes[route_idx]
+
+		choice = self.gather(route['wav'], route['gather'])
+		if route_idx != len(self.audio_routes) - 1:
+			return self.route_next(route_idx=(route_idx + 1))
+
+		else:
+			if choice == CONTROL_KEY:
+				terminus = "15. YesAdviceEnd.wav"
+			elif choice == ENTER_KEY:
+				terminus = "16. NoAdviceEnd.wav"
+
+			return self.say(terminus)
+
+		return False
+
+	def press(self, key):
+		logging.debug("(press overridden.)")
+
+		try:
+			return self.route_next()
+		except Exception as e:
+			logging.error("Could not play next route (%d)" % int(key))
+
+		return False
 
 	def run_script(self):
 		super(IsHeCheating, self).run_script()
