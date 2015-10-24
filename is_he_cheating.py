@@ -4,10 +4,12 @@ from time import time, sleep
 
 from core.api import MPServerAPI
 from core.video_pad import MPVideoPad
-from core.vars import UNPLAYABLE_FILES, BASE_DIR
+from core.vars import UNPLAYABLE_FILES, BASE_DIR, DEFAULT_TELEPHONE_GPIO
 
 ENTER_KEY = 4
 CONTROL_KEY = 5
+
+ANY_BUTTON = [3, 5, 10, 11]
 
 class IsHeCheating(MPServerAPI, MPVideoPad):
 	def __init__(self):
@@ -26,12 +28,10 @@ class IsHeCheating(MPServerAPI, MPVideoPad):
 				if re.match(r'\d+\.Question.*\.wav$', prompt) or prompt == "1.IsHeCheatingMenu.wav":
 					self.audio_routes.append({
 						'wav' : os.path.join(r, prompt),
-						'gather' : xrange(6) if i != 13 else [CONTROL_KEY, ENTER_KEY]
+						'gather' : [CONTROL_KEY, ENTER_KEY] if i not in ANY_BUTTON else DEFAULT_TELEPHONE_GPIO
 					})
 			
 			break
-
-		print self.audio_routes
 
 		self.conf['d_files']['vid'] = {
 			'log' : self.conf['d_files']['module']['log'],
@@ -45,34 +45,34 @@ class IsHeCheating(MPServerAPI, MPVideoPad):
 	def route_next(self, route_idx=0):
 		route = self.audio_routes[route_idx]
 
-		choice = self.gather(route['wav'], route['gather'])
+		choice = self.prompt(route['wav'], release_keys=route['gather'])
 		if route_idx != len(self.audio_routes) - 1:
 			return self.route_next(route_idx=(route_idx + 1))
 
 		else:
 			if choice == CONTROL_KEY:
-				terminus = "15. YesAdviceEnd.wav"
+				terminus = "15.YesAdviceEnd.wav"
 			elif choice == ENTER_KEY:
-				terminus = "16. NoAdviceEnd.wav"
+				terminus = "16.NoAdviceEnd.wav"
 
-			return self.say(terminus)
-
-		return False
-
-	def press(self, key):
-		logging.debug("(press overridden.)")
-
-		try:
-			return self.route_next()
-		except Exception as e:
-			logging.error("Could not play next route (%d)" % int(key))
+			return self.say(os.path.join(self.conf['media_dir'], "prompts", terminus))
 
 		return False
+
+	def reset_for_call(self):
+		super(IsHeCheating, self).reset_for_call()
+
+		for video_mapping in self.video_mappings:
+			self.db.delete("video_%s" % video_mapping.index)
+
+	def on_hang_up(self):
+		self.stop_video_pad()
+		return super(IsHeCheating, self).on_hang_up()
 
 	def run_script(self):
 		super(IsHeCheating, self).run_script()
-		self.play_video("VID_20140815_143633.mp4")
-		self.route_loop('demo_main_menu')
+		self.play_video("is_he_cheating.mp4", with_extras={"loop" : ""})
+		self.route_next()
 
 if __name__ == "__main__":
 	res = False
