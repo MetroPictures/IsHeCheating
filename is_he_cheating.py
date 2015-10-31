@@ -6,10 +6,16 @@ from core.api import MPServerAPI
 from core.video_pad import MPVideoPad
 from core.vars import UNPLAYABLE_FILES, BASE_DIR, DEFAULT_TELEPHONE_GPIO
 
-ENTER_KEY = 4
-CONTROL_KEY = 5
+# Arbitrary at this point
+CONTROL_KEY = 4
+ENTER_KEY = 5
+FUNCTION_KEY = 6
+ALT_KEY = 7
+COMMAND_KEY = 8
+ESCAPE_KEY = 9
 
 ANY_BUTTON = [3, 5, 10, 11]
+ALL_BUTTONS = [ENTER_KEY, CONTROL_KEY, FUNCTION_KEY, ALT_KEY, COMMAND_KEY, ESCAPE_KEY]
 
 class IsHeCheating(MPServerAPI, MPVideoPad):
 	def __init__(self):
@@ -28,7 +34,7 @@ class IsHeCheating(MPServerAPI, MPVideoPad):
 				if re.match(r'\d+\.Question.*\.wav$', prompt) or prompt == "1.IsHeCheatingMenu.wav":
 					self.audio_routes.append({
 						'wav' : os.path.join(r, prompt),
-						'gather' : [CONTROL_KEY, ENTER_KEY] if i not in ANY_BUTTON else DEFAULT_TELEPHONE_GPIO
+						'gather' : [CONTROL_KEY, ENTER_KEY] if i not in ANY_BUTTON else ALL_BUTTONS
 					})
 			
 			break
