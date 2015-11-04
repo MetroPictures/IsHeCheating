@@ -35,7 +35,7 @@ $(document).ready(function() {
 					var mapping = $($(this).find('.num')[0]).html();
 					
 					$.ajax({
-						url : "mapping/" + (buttons.indexOf(mapping) + 4)
+						url : "mapping/" + (buttons.indexOf(mapping) + 5)
 					}).done(function(json) {
 						console.info(json);
 					});
